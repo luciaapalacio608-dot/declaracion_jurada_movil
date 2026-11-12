@@ -1,0 +1,14 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      // Makes the phone's localhost:8000 reach this computer through the USB
+      // cable. Needs USB debugging enabled on the phone.
+      "label": "Conectar celular (adb reverse)",
+      "type": "process",
+      "command": "${env:LOCALAPPDATA}\\Android\\Sdk\\platform-tools\\adb.exe",
+      "args": ["reverse", "tcp:8000", "tcp:8000"],
+      "problemMatcher": []
+    }
+  ]
+}

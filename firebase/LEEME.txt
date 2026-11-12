@@ -1,0 +1,2 @@
+Copia automática de las reglas de DeclaraHorario (toolmuladores.ps1 la
+actualiza en cada arranque). No edite estos archivos: se sobrescriben.
