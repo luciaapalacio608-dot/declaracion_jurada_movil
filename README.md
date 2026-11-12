@@ -6,6 +6,149 @@ App Flutter (web adaptable a celular) para que el personal docente declare su
 horario y jornada. Reutiliza el proyecto **DeclaraHorario** sin modificarlo:
 se importa como dependencia por ruta (`declara_horario: path: ../DeclaraHorario`).
 
+## Cómo correr el proyecto (guía para la revisión)
+
+La app **no tiene un backend propio**: importa el proyecto del equipo,
+**DeclaraHorario**, como dependencia local (`declara_horario: path:
+../DeclaraHorario` en `pubspec.yaml`). Por eso se necesitan **los dos
+repositorios, uno al lado del otro**, y los datos de prueba corren en los
+**emuladores locales de Firebase** (no se toca el Firebase real).
+
+### 1. Requisitos (una sola vez)
+
+| Herramienta | Versión probada | Para qué |
+|---|---|---|
+| Flutter (canal stable) | 3.47.0 (Dart 3.13) | Compilar y correr la app |
+| Google Chrome | cualquiera reciente | Ver la app (web adaptable a celular) |
+| Node.js | 18 o superior (probado con 24) | Cargar los datos ficticios |
+| Firebase CLI | 15.x (`npm install -g firebase-tools`) | Emuladores locales |
+| Java (JDK) | 11 o superior (probado con 21) | Lo exige el emulador de Firestore |
+
+### 2. Descargar los dos repositorios en la misma carpeta
+
+El repositorio de DeclaraHorario es **privado**: hay que pedir acceso al
+equipo (Keity, Lucia o Cristopher) para poder clonarlo.
+
+```
+mkdir laboratorio
+cd laboratorio
+git clone https://github.com/dayanachavarriasteller-maker/DeclaraHorario.git
+git -C DeclaraHorario checkout develop
+git clone https://github.com/luciaapalacio608-dot/declaracion_jurada_movil.git
+```
+
+Debe quedar así (el nombre `DeclaraHorario` tiene que ser exacto):
+
+```
+laboratorio/
+├── DeclaraHorario/              ← proyecto del equipo (rama develop)
+└── declaracion_jurada_movil/    ← este laboratorio
+```
+
+La app se probó con DeclaraHorario en la rama `develop`, commit `fb156d0`.
+
+### 3. Instalar dependencias
+
+```
+cd declaracion_jurada_movil
+flutter pub get
+```
+
+### 4. Encender los emuladores con datos ficticios
+
+En Windows (PowerShell), desde `declaracion_jurada_movil`:
+
+```
+.\tool\emuladores.ps1
+```
+
+El script copia las reglas de seguridad de DeclaraHorario a `firebase/`,
+abre los emuladores en otra ventana (**no la cierre**) y carga los datos
+ficticios. Si PowerShell bloquea el script, ejecute antes
+`Set-ExecutionPolicy -Scope Process Bypass`. Si el Firebase CLI pide
+iniciar sesión, ejecute `firebase login` y vuelva a intentarlo.
+
+En macOS/Linux (o si prefiere hacerlo a mano), con dos terminales:
+
+```
+# Terminal 1 (se queda abierta)
+cp ../DeclaraHorario/firestore.rules ../DeclaraHorario/storage.rules firebase/
+firebase emulators:start --only auth,firestore,storage --project declarahorario-b186f
+
+# Terminal 2, cuando los emuladores estén listos
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 node tool/seed_emuladores.js
+```
+
+Se crean (solo en los emuladores):
+
+| Cuenta | Contraseña | Rol |
+|---|---|---|
+| `declarante@ucr.ac.cr` | `123456` | Declarante (Ana Prueba Ficticia) |
+| `revisor@ucr.ac.cr` | `123456` | Superior (no se usa en el laboratorio) |
+
+Además: sede, carrera y el período "II Ciclo 2026" (habilitado), y la
+asignación de la coordinación: curso ficticio con clases **lunes y miércoles
+de 8:00 a 10:00**, jornada **1/4 TC (10 h)**.
+
+### 5. Correr la app
+
+```
+flutter run -d chrome --dart-define=USE_EMULATORS=true --web-browser-flag=--window-size=412,915
+```
+
+o, en Visual Studio Code, **Ejecutar y depurar → "Chrome · emuladores (datos
+ficticios)"**.
+
+> Importante: sin `--dart-define=USE_EMULATORS=true` la app se conecta al
+> Firebase real, donde las cuentas de prueba no existen y el inicio de sesión
+> dice "Correo o contraseña incorrectos".
+
+Entre con `declarante@ucr.ac.cr` / `123456`. Con los emuladores, la sesión no
+se guarda entre recargas: después de recargar la página hay que volver a
+iniciar sesión (ver "Dificultades").
+
+### 6. Recorrido sugerido para revisar (≈ 3 minutos)
+
+1. **Pantalla principal:** toque **Nueva declaración** (o abra la existente).
+2. **Formulario:** elija un puesto y la jornada **1/4 TC** → **Guardar
+   borrador**. Borre el puesto y guarde: aparece el aviso de campo incompleto.
+3. **Horario semanal** (botón al final del formulario) → **Agregar
+   intervalo**: lunes 08:00–12:00 y lunes 11:00–14:00 → aparece el
+   **conflicto** (caso obligatorio). Toque el ícono de resumen: no deja validar.
+4. Corrija con este horario válido para la asignación ficticia y **Guarde**:
+   lunes 08:00–10:00 *Clase*, miércoles 08:00–10:00 *Clase*, martes
+   08:00–10:00 *Atención* y jueves 08:00–12:00 *Planificación* (total 10 h).
+5. **Resumen:** dice "Pasa todas las validaciones" → **Validar declaración**
+   → estado **VALIDADA**.
+6. Recargue la página, vuelva a entrar y abra la declaración: los datos y el
+   horario siguen guardados.
+
+### 7. Pruebas automáticas
+
+```
+flutter test
+```
+
+16 pruebas con datos ficticios (no necesitan los emuladores).
+
+### 8. Opcional: probar en un celular Android por cable
+
+1. Active la depuración USB en el teléfono y conéctelo.
+2. Compile y sirva la versión web, y redirija los puertos al teléfono:
+
+```
+flutter build web --release --dart-define=USE_EMULATORS=true
+node tool/servir.js        # se queda abierto; lo siguiente en otra terminal
+adb reverse tcp:8001 tcp:8001
+adb reverse tcp:9099 tcp:9099
+adb reverse tcp:8080 tcp:8080
+adb reverse tcp:9199 tcp:9199
+```
+
+3. En el navegador del teléfono abra `http://127.0.0.1:8001`.
+
+Las redirecciones de `adb reverse` se pierden si se desconecta el cable.
+
 ## Estructura
 
 ```
@@ -89,16 +232,6 @@ flutter test
 
 Las pruebas 01 y 04 se verificaron en la app real contra los emuladores
 (ver capturas). Pendiente opcional: automatizarlas con `fake_cloud_firestore`.
-
-### Cómo correrla
-
-1. Emuladores con datos ficticios: `.\tool\emuladores.ps1`
-   (cuenta `declarante@ucr.ac.cr` / `123456`).
-2. En la compu: VS Code → "Chrome · emuladores (datos ficticios)".
-3. En el celular por cable:
-   `flutter build web --release --dart-define=USE_EMULATORS=true`,
-   `node tool/servir.js`, `adb reverse` de 8001, 9099, 8080 y 9199, y abrir
-   `http://127.0.0.1:8001`.
 
 ### Prueba manual sugerida (01, 02 y 04)
 
