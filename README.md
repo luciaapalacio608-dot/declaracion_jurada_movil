@@ -1,5 +1,7 @@
 # Declaraciones Juradas – app móvil (Laboratorio IF0009)
 
+Repositorio: https://github.com/luciaapalacio608-dot/declaracion_jurada_movil
+
 App Flutter (web adaptable a celular) para que el personal docente declare su
 horario y jornada. Reutiliza el proyecto **DeclaraHorario** sin modificarlo:
 se importa como dependencia por ruta (`declara_horario: path: ../DeclaraHorario`).
